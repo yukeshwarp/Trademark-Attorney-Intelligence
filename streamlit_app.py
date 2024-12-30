@@ -132,7 +132,7 @@ if uploaded_files:
             #     result = response.json()  # Parse the response
             #     st.write(result)  # Display the raw response for debugging
             if llm_response.status_code == 200:
-                result = response.json()
+                result = llm_response.json()  # Parse the response as JSON
                 choices = result.get("choices", [])
                 if choices:
                     extracted_data = choices[0].get("message", {}).get("content", "").strip()
@@ -149,8 +149,9 @@ if uploaded_files:
                 else:
                     st.error("No choices returned from LLM response.")
             else:
-                st.error(f"Error processing LLM response: {response.status_code}")
-                st.json(response.json())
+                st.error(f"Error processing LLM response: {llm_response.status_code}")
+                st.json(llm_response.json())
+
             # Optionally, send to Azure for further processing (if needed)
             proceed = st.button("Assess Conflict")
             if proceed:
