@@ -109,6 +109,21 @@ if uploaded_files:
             {extracted_text}
             """
 
+            data = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that extracts details.",
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    },
+                ],
+                "temperature": 0.0,
+            }
+
             # Send the prompt to LLM for processing
             url = f"{azure_llm_endpoint}/openai/deployments/{llm_model}/chat/completions?api-version={llm_api_version}"
             response = requests.post(url, headers=llm_headers, json=data, timeout=30)
