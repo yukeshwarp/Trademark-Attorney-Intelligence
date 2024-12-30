@@ -200,5 +200,7 @@ if uploaded_files:
                                                 extracted_fields[field_name] = field_value.get("valueString", "N/A")
                 
                                     st.json(extracted_fields)
+                                else:
+                                    st.write("Error in assessing in conflict")
                 
                         st.write("All ranges processed successfully.")
