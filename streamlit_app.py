@@ -39,6 +39,20 @@ uploaded_files = st.file_uploader(
     label_visibility="collapsed",
 )
 
+def split_pdf_by_page_range(pdf_bytes, start_page, end_page):
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    new_doc = fitz.open()
+
+    # Append pages in the range to a new PDF
+    for page_num in range(start_page - 1, end_page):  # 0-based index in PyMuPDF
+        new_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
+
+    # Save the new document to a bytes buffer
+    pdf_buffer = BytesIO()
+    new_doc.save(pdf_buffer)
+    pdf_buffer.seek(0)
+    return pdf_buffer
+
 if uploaded_files:
     new_files = []
     for uploaded_file in uploaded_files:
