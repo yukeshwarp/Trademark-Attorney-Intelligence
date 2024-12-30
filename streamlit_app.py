@@ -110,7 +110,7 @@ if uploaded_files:
             """
 
             # Send the prompt to LLM for processing
-            url = f"{azure_llm_endpoint}/openai/deployments/{model}/chat/completions?api-version={llm_api_version}"
+            url = f"{azure_llm_endpoint}/openai/deployments/{llm_model}/chat/completions?api-version={llm_api_version}"
             response = requests.post(url, headers=llm_headers, json=data, timeout=30)
 
             if response.status_code == 200:
