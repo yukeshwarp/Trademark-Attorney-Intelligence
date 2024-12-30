@@ -159,7 +159,7 @@ if uploaded_files:
                     if True:
                     #     operation_location = llm_response.headers["Operation-Location"]
                     #     st.write("Processing... Please wait.")
-                        response = json.loads(response)
+                        response = json.loads(str(response))
 
                         for entry in response:
                             st.write("HI")
