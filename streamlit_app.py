@@ -4,7 +4,6 @@ import json
 from io import BytesIO
 import os
 import fitz  # PyMuPDF
-import re
 
 DI_ENDPOINT = os.getenv("COGNITIVE_SERVICES_DI_ENDPOINT")
 DI_API_KEY = os.getenv("COGNITIVE_SERVICES_DI_API_KEY")
@@ -56,6 +55,7 @@ if uploaded_files:
         capture = False
         for page in doc:
             text = page.get_text()
+            
             if "USPTO Summary Page" in text:
                 flag = True
             elif "ANALYST REVIEW − USPTO REPORT" in text:
@@ -64,35 +64,9 @@ if uploaded_files:
             if flag:
                 extracted_text = extracted_text + text
 
-        if extracted_text:# Extract name and page numbers
-            page_ranges = {}
-            current_page = None
-            
-            for page_number, page in enumerate(doc):
-                text = page.get_text("text")
-                lines = text.split("\n")
-            
-                for line in lines:
-                    match = re.match(r"(.*?)(Registered|Cancelled|Abandoned)\s+(\d+)", line)
-                    if match:
-                        name = match.group(1).strip()
-                        current_page = page_number + 1
-                        if name not in page_ranges:
-                            page_ranges[name] = [current_page]
-                        else:
-                            page_ranges[name].append(current_page)
-            
-            # Consolidate ranges
-            name_page_ranges = {}
-            for name, pages in page_ranges.items():
-                start_page = pages[0]
-                end_page = pages[-1]
-                name_page_ranges[name] = f"{start_page} to {end_page}"
-            
-            st.subheader("Name and Page Ranges")
-            st.json(name_page_ranges)
-
-
+        if extracted_text:
+            st.subheader("Extracted Text from PDF")
+            st.text_area("Extracted Section", extracted_text, height=300)
             proceed = st.button("Assess Conflict")
             if proceed:
                 with st.spinner("Sending to Azure..."):
