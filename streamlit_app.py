@@ -126,12 +126,12 @@ if uploaded_files:
 
             # Send the prompt to LLM for processing
             url = f"{azure_llm_endpoint}/openai/deployments/{llm_model}/chat/completions?api-version={llm_api_version}"
-            response = requests.post(url, headers=llm_headers, json=data, timeout=30)
-            response = (response.json().get("choices", [{}])[0].get("message", {}).get("content", ""))
+            llm_response = requests.post(url, headers=llm_headers, json=data, timeout=30)
+            response = (llm_response.json().get("choices", [{}])[0].get("message", {}).get("content", ""))
             # if response.status_code == 200:
             #     result = response.json()  # Parse the response
             #     st.write(result)  # Display the raw response for debugging
-            if response.status_code == 200:
+            if llm_response.status_code == 200:
                 result = response.json()
                 choices = result.get("choices", [])
                 if choices:
