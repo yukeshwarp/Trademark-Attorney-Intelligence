@@ -136,7 +136,7 @@ if uploaded_files:
                     json_response = json.loads(response)
                 except json.JSONDecodeError:
                     st.error("Failed to parse LLM response as JSON.")
-                    return
+                    break
 
                 # Iterate through the extracted page ranges and send each page range to Azure Document Intelligence
                 for item in json_response:
