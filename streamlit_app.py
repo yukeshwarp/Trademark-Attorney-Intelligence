@@ -110,7 +110,7 @@ if uploaded_files:
             """
 
             data = {
-                "model": model,
+                "model": llm_model,
                 "messages": [
                     {
                         "role": "system",
