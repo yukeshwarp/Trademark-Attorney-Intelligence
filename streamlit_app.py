@@ -128,39 +128,58 @@ if uploaded_files:
             url = f"{azure_llm_endpoint}/openai/deployments/{llm_model}/chat/completions?api-version={llm_api_version}"
             llm_response = requests.post(url, headers=llm_headers, json=data, timeout=30)
             response = (llm_response.json().get("choices", [{}])[0].get("message", {}).get("content", ""))
-            
+
             if llm_response.status_code == 200:
                 st.markdown(response)
-                
-            proceed = st.button("Assess Conflict")
-            if proceed:
-                with st.spinner("Sending to Azure..."):
-                    response = requests.post(
-                        f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
-                        headers=headers,
-                        data=pdf_bytes
-                    )
+                try:
+                    # Parse the JSON response from LLM
+                    json_response = json.loads(response)
+                except json.JSONDecodeError:
+                    st.error("Failed to parse LLM response as JSON.")
+                    return
 
-                    if response.status_code == 202:
-                        operation_location = response.headers["Operation-Location"]
-                        st.write("Processing... Please wait.")
+                # Iterate through the extracted page ranges and send each page range to Azure Document Intelligence
+                for item in json_response:
+                    name = item.get("name")
+                    page_start = int(item.get("page-start"))
+                    page_end = int(item.get("page-end"))
 
-                        # Poll for result
-                        while True:
-                            poll_response = requests.get(operation_location, headers={"Ocp-Apim-Subscription-Key": DI_API_KEY})
-                            result = poll_response.json()
+                    # Extract the relevant page range from the document
+                    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                        page_range_bytes = BytesIO()
+                        writer = fitz.open()
+                        for page_num in range(page_start - 1, page_end):
+                            writer.insert_pdf(doc, from_page=page_num, to_page=page_num)
+                        writer.save(page_range_bytes)
 
-                            if result.get("status") == "succeeded":
-                                extracted_data = result["analyzeResult"]
-                                st.success("Document processed successfully!")
-                                break
-                            elif result.get("status") == "failed":
-                                st.error("Failed to process document.")
-                                st.json(result)
-                                break
-                    else:
-                        st.error("Error sending document to Azure.")
-                        st.json(response.json())
+                    # Send the extracted page range to Document Intelligence
+                    with st.spinner(f"Sending pages {page_start}-{page_end} of {name} to Azure..."):
+                        response = requests.post(
+                            f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
+                            headers=headers,
+                            data=page_range_bytes.getvalue()
+                        )
+
+                        if response.status_code == 202:
+                            operation_location = response.headers["Operation-Location"]
+                            st.write(f"Processing pages {page_start}-{page_end}... Please wait.")
+
+                            # Poll for result
+                            while True:
+                                poll_response = requests.get(operation_location, headers={"Ocp-Apim-Subscription-Key": DI_API_KEY})
+                                result = poll_response.json()
+
+                                if result.get("status") == "succeeded":
+                                    extracted_data = result["analyzeResult"]
+                                    st.success(f"Pages {page_start}-{page_end} processed successfully!")
+                                    break
+                                elif result.get("status") == "failed":
+                                    st.error(f"Failed to process pages {page_start}-{page_end}.")
+                                    st.json(result)
+                                    break
+                        else:
+                            st.error(f"Error sending pages {page_start}-{page_end} to Azure.")
+                            st.json(response.json())
 
                 # Display Extracted Data
                 if extracted_data:
