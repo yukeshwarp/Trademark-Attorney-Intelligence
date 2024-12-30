@@ -60,8 +60,8 @@ if uploaded_files:
 
         flag = False
         extracted_text = ""
-        capture = False
-        for page in doc:
+        page_numbers = []
+        for page_num, page in enumerate(doc, start=1):
             text = page.get_text()
             if "USPTO Summary Page" in text:
                 flag = True
@@ -69,7 +69,9 @@ if uploaded_files:
                 flag = False
                 break
             if flag:
-                extracted_text = extracted_text + text
+                extracted_text += text
+                page_numbers.append(page_num)
+
         st.text(extracted_text)
         if extracted_text:  # If extracted text exists
             # Create a prompt for LLM to extract name and page ranges in the specified JSON format
@@ -102,7 +104,6 @@ if uploaded_files:
             21
             '''
             It means that contents related to ARRID EXTRA DRY are from page 15 to 17 and ARRID EXTRA EXTRA DRY from page 18 to 20, similarly for the following any number of entries.
-            
 
             Now process the following extracted text and return the output as a structured JSON array with fields "name", "start page" and "end page":
 
@@ -127,10 +128,9 @@ if uploaded_files:
             # Send the prompt to LLM for processing
             url = f"{azure_llm_endpoint}/openai/deployments/{llm_model}/chat/completions?api-version={llm_api_version}"
             llm_response = requests.post(url, headers=llm_headers, json=data, timeout=30)
-            response = (llm_response.json().get("choices", [{}])[0].get("message", {}).get("content", ""))
+            response = llm_response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
             
             if llm_response.status_code == 200:
-                st.write(type(response))
                 st.markdown(response)
                 
             proceed = st.button("Assess Conflict")
