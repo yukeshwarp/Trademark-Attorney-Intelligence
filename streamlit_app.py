@@ -132,26 +132,26 @@ if uploaded_files:
             #     result = response.json()  # Parse the response
             #     st.write(result)  # Display the raw response for debugging
             if llm_response.status_code == 200:
-                result = llm_response.json()  # Parse the response as JSON
-                choices = result.get("choices", [])
-                if choices:
-                    extracted_data = choices[0].get("message", {}).get("content", "").strip()
-                    if extracted_data:
-                        try:
-                            structured_output = json.loads(extracted_data)
-                            st.subheader("Extracted Name and Page Ranges")
-                            st.json(structured_output)
-                        except json.JSONDecodeError:
-                            st.error("Error parsing LLM response as JSON.")
-                            st.text(extracted_data)
-                    else:
-                        st.warning("No names and page ranges extracted by the LLM.")
-                else:
-                    st.error("No choices returned from LLM response.")
-            else:
-                st.error(f"Error processing LLM response: {llm_response.status_code}")
-                st.json(llm_response.json())
-
+                st.markdown(response)
+            #     result = response.json()
+            #     choices = result.get("choices", [])
+            #     if choices:
+            #         extracted_data = choices[0].get("message", {}).get("content", "").strip()
+            #         if extracted_data:
+            #             try:
+            #                 structured_output = json.loads(extracted_data)
+            #                 st.subheader("Extracted Name and Page Ranges")
+            #                 st.json(structured_output)
+            #             except json.JSONDecodeError:
+            #                 st.error("Error parsing LLM response as JSON.")
+            #                 st.text(extracted_data)
+            #         else:
+            #             st.warning("No names and page ranges extracted by the LLM.")
+            #     else:
+            #         st.error("No choices returned from LLM response.")
+            # else:
+            #     st.error(f"Error processing LLM response: {response.status_code}")
+            #     st.json(response.json())
             # Optionally, send to Azure for further processing (if needed)
             proceed = st.button("Assess Conflict")
             if proceed:
