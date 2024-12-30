@@ -161,6 +161,7 @@ if uploaded_files:
                         st.write("Processing... Please wait.")
 
                         for entry in response:
+                            st.write("HI")
                             start_page = int(entry["page-start"])
                             end_page = int(entry["page-end"])
                             name = entry["name"]
