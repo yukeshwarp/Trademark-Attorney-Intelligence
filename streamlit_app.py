@@ -64,24 +64,34 @@ if uploaded_files:
             if flag:
                 extracted_text = extracted_text + text
 
-        if extracted_text:
-            st.subheader("Extracted Text from PDF")
-            st.text_area("Extracted Section", extracted_text, height=300)
-
-            # Extract name and page ranges
-            matches = re.findall(r"(.*?)\\n.*?\\n(\d+)", extracted_text)
+        if extracted_text:# Extract name and page numbers
+            page_ranges = {}
+            current_page = None
+            
+            for page_number, page in enumerate(doc):
+                text = page.get_text("text")
+                lines = text.split("\n")
+            
+                for line in lines:
+                    match = re.match(r"(.*?)(Registered|Cancelled|Abandoned)\s+(\d+)", line)
+                    if match:
+                        name = match.group(1).strip()
+                        current_page = page_number + 1
+                        if name not in page_ranges:
+                            page_ranges[name] = [current_page]
+                        else:
+                            page_ranges[name].append(current_page)
+            
+            # Consolidate ranges
             name_page_ranges = {}
-
-            for i, match in enumerate(matches):
-                name, start_page = match
-                if i < len(matches) - 1:
-                    _, end_page = matches[i + 1]
-                    name_page_ranges[name] = f"{start_page} to {int(end_page)-1}"
-                else:
-                    name_page_ranges[name] = f"{start_page} to {int(start_page)+2}"
-
+            for name, pages in page_ranges.items():
+                start_page = pages[0]
+                end_page = pages[-1]
+                name_page_ranges[name] = f"{start_page} to {end_page}"
+            
             st.subheader("Name and Page Ranges")
             st.json(name_page_ranges)
+
 
             proceed = st.button("Assess Conflict")
             if proceed:
