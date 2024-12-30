@@ -60,7 +60,7 @@ if uploaded_files:
             # if capture and "ANALYST REVIEW − USPTO REPORT" in text:
             #     extracted_text = extracted_text.split("ANALYST REVIEW − USPTO REPORT", 1)[0]
             #     break
-
+        extracted_text = text
         if extracted_text:
             st.subheader("Extracted Text from PDF")
             st.text_area("Extracted Section", extracted_text, height=300)
