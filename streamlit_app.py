@@ -144,7 +144,7 @@ if uploaded_files:
             llm_response = requests.post(url, headers=llm_headers, json=data, timeout=30)
             response = llm_response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
             
-            if llm_llm_response.status_code == 200:
+            if llm_response.status_code == 200:
                 st.markdown(response)
                 
             proceed = st.button("Assess Conflict")
