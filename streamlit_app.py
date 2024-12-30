@@ -156,9 +156,10 @@ if uploaded_files:
                         data=pdf_bytes
                     )
 
-                    if response.status_code == 202:
-                        operation_location = response.headers["Operation-Location"]
+                    if llm_response.status_code == 202:
+                        operation_location = llm_response.headers["Operation-Location"]
                         st.write("Processing... Please wait.")
+                        response = json.loads(response)
 
                         for entry in response:
                             st.write("HI")
