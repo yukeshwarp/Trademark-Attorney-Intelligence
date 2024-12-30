@@ -144,7 +144,7 @@ if uploaded_files:
             llm_response = requests.post(url, headers=llm_headers, json=data, timeout=30)
             response = llm_response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
             
-            if llm_response.status_code == 200:
+            if llm_llm_response.status_code == 200:
                 st.markdown(response)
                 
             proceed = st.button("Assess Conflict")
@@ -159,7 +159,7 @@ if uploaded_files:
                     if True:
                     #     operation_location = llm_response.headers["Operation-Location"]
                     #     st.write("Processing... Please wait.")
-                        response = json.loads(str(response))
+                        str_response = json.loads(str(response))
 
                         for entry in response:
                             st.write("HI")
@@ -181,7 +181,7 @@ if uploaded_files:
                                     data=split_pdf.read()
                                 )
                 
-                                if response.status_code == 202:
+                                if llm_response.status_code == 202:
                                     operation_location = response.headers["Operation-Location"]
                                     st.write(f"Processing {name} pages {start_page}-{end_page}... Please wait.")
                 
