@@ -10,18 +10,17 @@ import re
 DI_ENDPOINT = os.getenv("COGNITIVE_SERVICES_DI_ENDPOINT")
 DI_API_KEY = os.getenv("COGNITIVE_SERVICES_DI_API_KEY")
 DI_MODEL_ID = os.getenv("DOCUMENT_INTELLIGENCE_MODEL")
-LLM_API_KEY = os.getenv("LLM_API_KEY")  # Assuming you have an LLM API key like OpenAI
-LLM_ENDPOINT = os.getenv("LLM_ENDPOINT")  # Endpoint for your LLM
+llm_api_key = os.getenv("LLM_API_KEY")  # Assuming you have an LLM API key like OpenAI
+azure_llm_endpoint = os.getenv("LLM_ENDPOINT")  # Endpoint for your LLM
+llm_model = os.getenv("LLM_MODEL")
+llm_api_version = os.getenv("LLM_API_VERSION")
 
 headers = {
     "Ocp-Apim-Subscription-Key": DI_API_KEY,
     "Content-Type": "application/pdf"
 }
 
-llm_headers = {
-    "Authorization": f"Bearer {LLM_API_KEY}",
-    "Content-Type": "application/json"
-}
+llm_headers = {"Content-Type": "application/json", "api-key": llm_api_key}
 
 # Initialize session state if not already set
 if 'documents' not in st.session_state:
@@ -111,11 +110,8 @@ if uploaded_files:
             """
 
             # Send the prompt to LLM for processing
-            response = requests.post(
-                LLM_ENDPOINT,
-                headers=llm_headers,
-                json={"prompt": prompt, "max_tokens": 1000}
-            )
+            url = f"{azure_llm_endpoint}/openai/deployments/{model}/chat/completions?api-version={llm_api_version}"
+            response = requests.post(url, headers=llm_headers, json=data, timeout=30)
 
             if response.status_code == 200:
                 result = response.json()
