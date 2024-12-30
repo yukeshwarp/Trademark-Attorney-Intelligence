@@ -55,7 +55,6 @@ if uploaded_files:
         capture = False
         for page in doc:
             text = page.get_text()
-            extracted_text = extracted_text + text
             
             if "USPTO Summary Page" in text:
                 flag = True
