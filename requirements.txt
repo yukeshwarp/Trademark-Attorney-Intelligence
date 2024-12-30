@@ -3,3 +3,7 @@ python-docx
 openpyxl
 python-pptx
 PyMuPDF
+streamlit
+requests
+json
+re
