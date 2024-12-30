@@ -49,18 +49,21 @@ if uploaded_files:
         st.success(f"File Selected: {new_file.name}")
         pdf_bytes = new_file.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        
+
+        flag = False
         extracted_text = ""
         capture = False
         for page in doc:
             text = page.get_text()
             extracted_text = extracted_text + text
-            # if "USPTO Summary Page" in text:
-            #     capture = True
-            #     extracted_text = text.split("USPTO Summary Page", 1)[1]
-            # if capture and "ANALYST REVIEW − USPTO REPORT" in text:
-            #     extracted_text = extracted_text.split("ANALYST REVIEW − USPTO REPORT", 1)[0]
-            #     break
+            
+            if "USPTO Summary Page" in text:
+                flag = True
+            elif "ANALYST REVIEW − USPTO REPORT" in text:
+                flag = False
+                break
+            if flag:
+                extracted_text = extracted_text + text
 
         if extracted_text:
             st.subheader("Extracted Text from PDF")
