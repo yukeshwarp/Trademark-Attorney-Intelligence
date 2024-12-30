@@ -70,7 +70,7 @@ if uploaded_files:
                 break
             if flag:
                 extracted_text = extracted_text + text
-
+        st.text(extracted_text)
         if extracted_text:  # If extracted text exists
             # Create a prompt for LLM to extract name and page ranges in the specified JSON format
             prompt = f"""
