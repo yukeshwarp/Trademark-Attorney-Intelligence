@@ -4,14 +4,23 @@ import json
 from io import BytesIO
 import os
 import fitz  # PyMuPDF
+import re
 
+# Set up API keys and endpoints
 DI_ENDPOINT = os.getenv("COGNITIVE_SERVICES_DI_ENDPOINT")
 DI_API_KEY = os.getenv("COGNITIVE_SERVICES_DI_API_KEY")
 DI_MODEL_ID = os.getenv("DOCUMENT_INTELLIGENCE_MODEL")
+LLM_API_KEY = os.getenv("LLM_API_KEY")  # Assuming you have an LLM API key like OpenAI
+LLM_ENDPOINT = os.getenv("LLM_ENDPOINT")  # Endpoint for your LLM
 
 headers = {
     "Ocp-Apim-Subscription-Key": DI_API_KEY,
     "Content-Type": "application/pdf"
+}
+
+llm_headers = {
+    "Authorization": f"Bearer {LLM_API_KEY}",
+    "Content-Type": "application/json"
 }
 
 # Initialize session state if not already set
@@ -55,7 +64,6 @@ if uploaded_files:
         capture = False
         for page in doc:
             text = page.get_text()
-            
             if "USPTO Summary Page" in text:
                 flag = True
             elif "ANALYST REVIEW − USPTO REPORT" in text:
@@ -64,9 +72,71 @@ if uploaded_files:
             if flag:
                 extracted_text = extracted_text + text
 
-        if extracted_text:
-            st.subheader("Extracted Text from PDF")
-            st.text_area("Extracted Section", extracted_text, height=300)
+        if extracted_text:  # If extracted text exists
+            # Create a prompt for LLM to extract name and page ranges in the specified JSON format
+            prompt = f"""
+            The following text is extracted from a document. The task is to extract the name and associated page ranges in a structured JSON array format with each entry containing:
+            - "name": The name of the entity (string).
+            - "page-start": The first page number where the entity appears (string).
+            - "page-end": The last page number where the entity appears (string).
+
+            Example:
+            The data will be as below
+            '''
+            1. ARRID EXTRA DRY
+            Registered
+            3
+            CHURCH & DWIGHT CO., INC.
+            73−716,876
+            15
+            2. ARRID EXTRA EXTRA DRY
+            Registered
+            3
+            CHURCH & DWIGHT CO., INC.
+            78−446,679
+            18
+            3. EXTRA RICH FOR DRY, THIRSTY HAIR
+            Cancelled
+            3
+            NAMASTE LABORATORIES, L.L.C.
+            77−847,568
+            21
+            '''
+            It means that contents related to ARRID EXTRA DRY are from page 15 to 17 and ARRID EXTRA EXTRA DRY from page 18 to 20, similarly for the following any number of entries.
+            
+
+            Now process the following extracted text and return the output as a structured JSON array with fields "name", "start page" and "end page":
+
+            {extracted_text}
+            """
+
+            # Send the prompt to LLM for processing
+            response = requests.post(
+                LLM_ENDPOINT,
+                headers=llm_headers,
+                json={"prompt": prompt, "max_tokens": 1000}
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                extracted_data = result.get("choices", [])[0].get("text", "").strip()
+
+                if extracted_data:
+                    try:
+                        # Try to parse the output as JSON
+                        structured_output = json.loads(extracted_data)
+                        st.subheader("Extracted Name and Page Ranges")
+                        st.json(structured_output)
+                    except json.JSONDecodeError:
+                        st.error("Error parsing LLM response as JSON.")
+                        st.text(extracted_data)
+                else:
+                    st.warning("No names and page ranges extracted by the LLM.")
+            else:
+                st.error(f"Error processing LLM response: {response.status_code}")
+                st.json(response.json())
+
+            # Optionally, send to Azure for further processing (if needed)
             proceed = st.button("Assess Conflict")
             if proceed:
                 with st.spinner("Sending to Azure..."):
@@ -109,7 +179,7 @@ if uploaded_files:
                         for field_name, field_value in fields.items():
                             if field_name in fields_to_display:
                                 extracted_fields[field_name] = field_value.get("valueString", "N/A")
-                    
+
                     st.json(extracted_fields)
         else:
             st.warning("No relevant section found in the document.")
