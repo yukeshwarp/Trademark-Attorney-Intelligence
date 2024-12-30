@@ -4,6 +4,7 @@ import json
 from io import BytesIO
 import os
 import fitz  # PyMuPDF
+import re
 
 DI_ENDPOINT = os.getenv("COGNITIVE_SERVICES_DI_ENDPOINT")
 DI_API_KEY = os.getenv("COGNITIVE_SERVICES_DI_API_KEY")
@@ -55,7 +56,6 @@ if uploaded_files:
         capture = False
         for page in doc:
             text = page.get_text()
-            
             if "USPTO Summary Page" in text:
                 flag = True
             elif "ANALYST REVIEW − USPTO REPORT" in text:
@@ -67,6 +67,22 @@ if uploaded_files:
         if extracted_text:
             st.subheader("Extracted Text from PDF")
             st.text_area("Extracted Section", extracted_text, height=300)
+
+            # Extract name and page ranges
+            matches = re.findall(r"(.*?)\\n.*?\\n(\d+)", extracted_text)
+            name_page_ranges = {}
+
+            for i, match in enumerate(matches):
+                name, start_page = match
+                if i < len(matches) - 1:
+                    _, end_page = matches[i + 1]
+                    name_page_ranges[name] = f"{start_page} to {int(end_page)-1}"
+                else:
+                    name_page_ranges[name] = f"{start_page} to {int(start_page)+2}"
+
+            st.subheader("Name and Page Ranges")
+            st.json(name_page_ranges)
+
             proceed = st.button("Assess Conflict")
             if proceed:
                 with st.spinner("Sending to Azure..."):
