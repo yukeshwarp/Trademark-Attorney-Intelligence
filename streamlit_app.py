@@ -54,13 +54,14 @@ if uploaded_files:
         capture = False
         for page in doc:
             text = page.get_text()
+            extracted_text = extracted_text + text
             # if "USPTO Summary Page" in text:
             #     capture = True
             #     extracted_text = text.split("USPTO Summary Page", 1)[1]
             # if capture and "ANALYST REVIEW − USPTO REPORT" in text:
             #     extracted_text = extracted_text.split("ANALYST REVIEW − USPTO REPORT", 1)[0]
             #     break
-        extracted_text = text
+
         if extracted_text:
             st.subheader("Extracted Text from PDF")
             st.text_area("Extracted Section", extracted_text, height=300)
