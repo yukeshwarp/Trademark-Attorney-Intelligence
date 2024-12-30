@@ -65,7 +65,7 @@ if uploaded_files:
             text = page.get_text()
             if "USPTO Summary Page" in text:
                 flag = True
-            elif "ANALYST REVIEW − USPTO REPORT" in text:
+            elif "ANALYST REVIEW −USPTO REPORT" in text:
                 flag = False
                 break
             if flag:
