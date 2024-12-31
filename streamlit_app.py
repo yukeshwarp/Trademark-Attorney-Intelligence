@@ -146,77 +146,38 @@ if uploaded_files:
             
             if llm_response.status_code == 200:
                 st.markdown(response)
-                
-            proceed = st.button("Assess Conflict")
-            if proceed:
-                with st.spinner("Sending to Azure..."):
-                    response = requests.post(
-                        f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
-                        headers=headers,
-                        data=pdf_bytes
-                    )
 
-                    if True:
-                    #     operation_location = llm_response.headers["Operation-Location"]
-                    #     st.write("Processing... Please wait.")
-                        str_response = json.loads(str(response))
+                extracted_ranges = json.loads(response)
+                for entry in extracted_ranges:
+                    start_page = int(entry["page-start"])
+                    end_page = int(entry["page-end"])
+                    name = entry["name"]
 
-                        for entry in response:
-                            st.write("HI")
-                            start_page = int(entry["page-start"])
-                            end_page = int(entry["page-end"])
-                            name = entry["name"]
-                
-                            st.write(f"Processing pages {start_page}-{end_page} for {name}...")
-                
-                            # Split the PDF into the page range specified
-                            split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
-                
-                            # Send the range of pages to Azure Document Intelligence API
-                            st.write(f"Sending {name} pages {start_page}-{end_page} to Azure...")
-                            with st.spinner(f"Processing {name}..."):
-                                response = requests.post(
-                                    f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
-                                    headers=headers,
-                                    data=split_pdf.read()
-                                )
-                
-                                if llm_response.status_code == 202:
-                                    operation_location = response.headers["Operation-Location"]
-                                    st.write(f"Processing {name} pages {start_page}-{end_page}... Please wait.")
-                
-                                    # Poll for result
-                                    while True:
-                                        poll_response = requests.get(operation_location, headers={"Ocp-Apim-Subscription-Key": DI_API_KEY})
-                                        result = poll_response.json()
-                
-                                        if result.get("status") == "succeeded":
-                                            extracted_data = result["analyzeResult"]
-                                            st.success(f"Document {name} processed successfully!")
-                                            break
-                                        elif result.get("status") == "failed":
-                                            st.error(f"Failed to process document {name}.")
-                                            st.json(result)
-                                            break
-                                else:
-                                    st.error(f"Error sending document {name} to Azure.")
-                                    st.json(response.json())
-                
-                                # Display Extracted Data for the current range
-                                if extracted_data:
-                                    st.subheader(f"Extracted Data for {name} (Pages {start_page}-{end_page})")
-                                    fields_to_display = ["Trademark", "Owner", "Class", "Status", "Goods/Service", "Design Phrase"]
-                                    extracted_fields = {}
-                
-                                    documents = extracted_data.get("documents", [])
-                                    for doc in documents:
-                                        fields = doc.get("fields", {})
-                                        for field_name, field_value in fields.items():
-                                            if field_name in fields_to_display:
-                                                extracted_fields[field_name] = field_value.get("valueString", "N/A")
-                
-                                    st.json(extracted_fields)
-                                else:
-                                    st.write("Error in assessing in conflict")
-                
-                        st.write("All ranges processed successfully.")
+                    split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
+
+                    with st.spinner(f"Sending {name} pages {start_page}-{end_page} to Azure..."):
+                        response = requests.post(
+                            f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
+                            headers=headers,
+                            data=split_pdf.read()
+                        )
+
+                        if response.status_code == 202:
+                            operation_location = response.headers.get("Operation-Location")
+
+                            while True:
+                                poll_response = requests.get(operation_location, headers=headers)
+                                result = poll_response.json()
+
+                                if result.get("status") == "succeeded":
+                                    extracted_data = result["analyzeResult"]
+                                    st.success(f"{name} processed successfully!")
+                                    st.json(extracted_data)
+                                    break
+                                elif result.get("status") == "failed":
+                                    st.error(f"Failed to process {name}.")
+                                    break
+                        else:
+                            st.error("Failed to send document to Azure.")
+            else:
+                st.error("Failed to get response from LLM.")
