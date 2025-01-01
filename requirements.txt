@@ -4,3 +4,5 @@ openpyxl
 python-pptx
 PyMuPDF
 requests
+redis
+celery
