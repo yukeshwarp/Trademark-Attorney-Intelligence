@@ -159,64 +159,65 @@ if uploaded_files:
 
             st_response = str(response)[7:-3]
             records = json.loads(st_response)
-            for entry in records:
-                st.write(entry)
-                start_page = int(entry["page-start"])
-                end_page = int(entry["page-end"])
-                name = entry["name"]
-                split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
-
-                st.write(f"Sending {name} pages {start_page}-{end_page} to Azure...")
-                with st.spinner(f"Processing {name}..."):
-                    response = requests.post(
-                        f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
-                        headers=headers,
-                        data=split_pdf.getvalue(),
-                    )
-
-                    if response.status_code == 202:
-                        operation_location = response.headers["Operation-Location"]
-                        st.write("Processing... Please wait.")
-
-                        while True:
-                            poll_response = requests.get(
-                                operation_location,
-                                headers={"Ocp-Apim-Subscription-Key": DI_API_KEY},
-                            )
-                            result = poll_response.json()
-
-                            if result.get("status") == "succeeded":
-                                extracted_data = result["analyzeResult"]
-                                st.success("Document processed successfully!")
-                                break
-                            elif result.get("status") == "failed":
-                                st.error("Failed to process document.")
-                                st.json(result)
-                                break
-                    else:
-                        st.error("Error sending document to Azure.")
-                        st.json(response.json())
-
-                if extracted_data:
-                    st.subheader("Extracted Data")
-                    fields_to_display = [
-                        "Trademark",
-                        "Owner",
-                        "Class",
-                        "Status",
-                        "Goods/Service",
-                        "Design Phrase",
-                    ]
-                    extracted_fields = {}
-
-                    documents = extracted_data.get("documents", [])
-                    for doc in documents:
-                        fields = doc.get("fields", {})
-                        for field_name, field_value in fields.items():
-                            if field_name in fields_to_display:
-                                extracted_fields[field_name] = field_value.get(
-                                    "valueString", "N/A"
+            with st.spinner('Accessing conflics..'):
+                for entry in records:
+                    st.write(entry)
+                    start_page = int(entry["page-start"])
+                    end_page = int(entry["page-end"])
+                    name = entry["name"]
+                    split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
+    
+                    st.write(f"Sending {name} pages {start_page}-{end_page} to Azure...")
+                    with st.spinner(f"Processing {name}..."):
+                        response = requests.post(
+                            f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
+                            headers=headers,
+                            data=split_pdf.getvalue(),
+                        )
+    
+                        if response.status_code == 202:
+                            operation_location = response.headers["Operation-Location"]
+                            st.write("Processing... Please wait.")
+    
+                            while True:
+                                poll_response = requests.get(
+                                    operation_location,
+                                    headers={"Ocp-Apim-Subscription-Key": DI_API_KEY},
                                 )
-
-                    st.json(extracted_fields)
-                    redis_client.set(redis_key, json.dumps(extracted_fields))
+                                result = poll_response.json()
+    
+                                if result.get("status") == "succeeded":
+                                    extracted_data = result["analyzeResult"]
+                                    st.success("Document processed successfully!")
+                                    break
+                                elif result.get("status") == "failed":
+                                    st.error("Failed to process document.")
+                                    st.json(result)
+                                    break
+                        else:
+                            st.error("Error sending document to Azure.")
+                            st.json(response.json())
+    
+                    if extracted_data:
+                        st.subheader("Extracted Data")
+                        fields_to_display = [
+                            "Trademark",
+                            "Owner",
+                            "Class",
+                            "Status",
+                            "Goods/Service",
+                            "Design Phrase",
+                        ]
+                        extracted_fields = {}
+    
+                        documents = extracted_data.get("documents", [])
+                        for doc in documents:
+                            fields = doc.get("fields", {})
+                            for field_name, field_value in fields.items():
+                                if field_name in fields_to_display:
+                                    extracted_fields[field_name] = field_value.get(
+                                        "valueString", "N/A"
+                                    )
+    
+                        st.json(extracted_fields)
+                        redis_client.set(redis_key, json.dumps(extracted_fields))
