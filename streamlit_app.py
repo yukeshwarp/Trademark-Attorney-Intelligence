@@ -74,91 +74,91 @@ if uploaded_files:
             and uploaded_file.name not in st.session_state.removed_documents
         ):
             new_files.append(uploaded_file)
-
-    for new_file in new_files:
-        st.success(f"File Selected: {new_file.name}")
-        pdf_bytes = new_file.read()
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-
-        flag = False
-        extracted_text = ""
-        page_numbers = []
-        for page_num, page in enumerate(doc, start=1):
-            text = page.get_text()
-            if "USPTO Summary Page" in text:
-                flag = True
-            elif "ANALYST REVIEW −USPTO REPORT" in text:
-                flag = False
-                break
-            if flag:
-                extracted_text += text
-                page_numbers.append(page_num)
-
-        if extracted_text:
-            prompt = f"""
-                The following text is extracted from a document. The task is to extract the name and associated page ranges in a structured JSON array format with each entry containing:
-                - "name": The name of the entity (string).
-                - "page-start": The first page number where the entity appears (string).
-                - "page-end": The last page number where the entity appears (string).
-
-                Example:
-                The data will be as below
-                '''
-                1. ARRID EXTRA DRY
-                Registered
-                3
-                CHURCH & DWIGHT CO., INC.
-                73-716,876
-                15
-                2. ARRID EXTRA EXTRA DRY
-                Registered
-                3
-                CHURCH & DWIGHT CO., INC.
-                78-446,679
-                18
-                3. EXTRA RICH FOR DRY, THIRSTY HAIR
-                Cancelled
-                3
-                NAMASTE LABORATORIES, L.L.C.
-                77-847,568
-                21
-                '''
-                It means that contents related to ARRID EXTRA DRY are from page 15 to 17 and ARRID EXTRA EXTRA DRY from page 18 to 20, similarly for the following any number of entries.
-
-            Now process the following extracted text and return the output as a structured JSON array with fields "name", "start page" and "end page":
-
-            {extracted_text}
-            """
-
-            data = {
-                "model": llm_model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that extracts details.",
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                ],
-                "temperature": 0.0,
-            }
-
-            url = f"{azure_llm_endpoint}/openai/deployments/{llm_model}/chat/completions?api-version={llm_api_version}"
-            llm_response = requests.post(
-                url, headers=llm_headers, json=data, timeout=30
-            )
-            response = (
-                llm_response.json()
-                .get("choices", [{}])[0]
-                .get("message", {})
-                .get("content", "")
-                .strip()
-            )
-
-            st_response = str(response)[7:-3]
-            records = json.loads(st_response)
+    with st.spinner("Extracting trademarks..."):
+        for new_file in new_files:
+            st.success(f"File Selected: {new_file.name}")
+            pdf_bytes = new_file.read()
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    
+            flag = False
+            extracted_text = ""
+            page_numbers = []
+            for page_num, page in enumerate(doc, start=1):
+                text = page.get_text()
+                if "USPTO Summary Page" in text:
+                    flag = True
+                elif "ANALYST REVIEW −USPTO REPORT" in text:
+                    flag = False
+                    break
+                if flag:
+                    extracted_text += text
+                    page_numbers.append(page_num)
+    
+            if extracted_text:
+                prompt = f"""
+                    The following text is extracted from a document. The task is to extract the name and associated page ranges in a structured JSON array format with each entry containing:
+                    - "name": The name of the entity (string).
+                    - "page-start": The first page number where the entity appears (string).
+                    - "page-end": The last page number where the entity appears (string).
+    
+                    Example:
+                    The data will be as below
+                    '''
+                    1. ARRID EXTRA DRY
+                    Registered
+                    3
+                    CHURCH & DWIGHT CO., INC.
+                    73-716,876
+                    15
+                    2. ARRID EXTRA EXTRA DRY
+                    Registered
+                    3
+                    CHURCH & DWIGHT CO., INC.
+                    78-446,679
+                    18
+                    3. EXTRA RICH FOR DRY, THIRSTY HAIR
+                    Cancelled
+                    3
+                    NAMASTE LABORATORIES, L.L.C.
+                    77-847,568
+                    21
+                    '''
+                    It means that contents related to ARRID EXTRA DRY are from page 15 to 17 and ARRID EXTRA EXTRA DRY from page 18 to 20, similarly for the following any number of entries.
+    
+                Now process the following extracted text and return the output as a structured JSON array with fields "name", "start page" and "end page":
+    
+                {extracted_text}
+                """
+    
+                data = {
+                    "model": llm_model,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful assistant that extracts details.",
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt,
+                        },
+                    ],
+                    "temperature": 0.0,
+                }
+    
+                url = f"{azure_llm_endpoint}/openai/deployments/{llm_model}/chat/completions?api-version={llm_api_version}"
+                llm_response = requests.post(
+                    url, headers=llm_headers, json=data, timeout=30
+                )
+                response = (
+                    llm_response.json()
+                    .get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                    .strip()
+                )
+    
+                st_response = str(response)[7:-3]
+                records = json.loads(st_response)
             with st.spinner('Accessing conflics..'):
                 for entry in records:
                     st.write(entry)
