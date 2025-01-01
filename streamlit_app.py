@@ -37,7 +37,7 @@ if "removed_documents" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
-st.title("PDF to Azure Document Intelligence")
+st.title("Trademark Attorney Intelligence", divider = "orange")
 
 uploaded_files = st.file_uploader(
     "Upload files less than 400 pages",
