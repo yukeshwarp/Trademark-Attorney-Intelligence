@@ -159,7 +159,6 @@ if uploaded_files:
 
             st_response = str(response)[7:-3]
             records = json.loads(st_response)
-            st.write(st_response)
             for entry in records:
                 st.write(entry)
                 start_page = int(entry["page-start"])
