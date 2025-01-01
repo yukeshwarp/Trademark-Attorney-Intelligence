@@ -7,6 +7,7 @@ import fitz
 import re
 import uuid
 import redis
+from celery import Celery
 
 DI_ENDPOINT = os.getenv("COGNITIVE_SERVICES_DI_ENDPOINT")
 DI_API_KEY = os.getenv("COGNITIVE_SERVICES_DI_API_KEY")
@@ -30,6 +31,13 @@ redis_client = redis.Redis(
     password= redis_key,
 )
 
+# Celery configuration
+celery = Celery(
+    'tasks',
+    broker=os.getenv("CELERY_BROKER_URL", 'redis://localhost:6379/0'),
+    backend=os.getenv("CELERY_BACKEND_URL", 'redis://localhost:6379/0')
+)
+
 if "documents" not in st.session_state:
     st.session_state.documents = {}
 if "removed_documents" not in st.session_state:
@@ -48,6 +56,33 @@ uploaded_files = st.file_uploader(
     label_visibility="collapsed",
 )
 
+@celery.task(bind=True)
+def analyze_document(self, pdf_bytes, name, start_page, end_page):
+    split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
+    response = requests.post(
+        f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
+        headers=headers,
+        data=split_pdf.getvalue(),
+    )
+
+    if response.status_code == 202:
+        operation_location = response.headers["Operation-Location"]
+        while True:
+            poll_response = requests.get(
+                operation_location,
+                headers={"Ocp-Apim-Subscription-Key": DI_API_KEY},
+            )
+            result = poll_response.json()
+
+            if result.get("status") == "succeeded":
+                extracted_data = result["analyzeResult"]
+                redis_client.set(f"{redis_key}_{name}", json.dumps(extracted_data))
+                return extracted_data
+
+            elif result.get("status") == "failed":
+                self.retry(countdown=10, exc=Exception("Processing failed"))
+                return None
+    return None
 
 def split_pdf_by_page_range(pdf_bytes, start_page, end_page):
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -160,66 +195,82 @@ if uploaded_files:
 
             st_response = str(response)[7:-3]
             records = json.loads(st_response)
-            with st.spinner('Accessing conflics..'):
-                for entry in records:
-                    st.write(entry)
-                    start_page = int(entry["page-start"])
-                    end_page = int(entry["page-end"])
-                    name = entry["name"]
-                    split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
+            for record in records:
+                batch.append((pdf_bytes, record['name'], int(record['page-start']), int(record['page-end'])))
+
+                if len(batch) == 5:
+                    extracted_batches.append(batch)
+                    batch = []
+
+    if batch:
+        extracted_batches.append(batch)
+
+    for batch in extracted_batches:
+        for pdf_bytes, name, start_page, end_page in batch:
+            analyze_document.delay(pdf_bytes, name, start_page, end_page)
+
+    st.success("Documents are being processed in the background.")
+
+            # with st.spinner('Accessing conflics..'):
+            #     for entry in records:
+            #         st.write(entry)
+            #         start_page = int(entry["page-start"])
+            #         end_page = int(entry["page-end"])
+            #         name = entry["name"]
+            #         split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
     
-                    st.write(f"Sending {name} pages {start_page}-{end_page} to Azure...")
-                    with st.spinner(f"Processing {name}..."):
-                        response = requests.post(
-                            f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
-                            headers=headers,
-                            data=split_pdf.getvalue(),
-                        )
+            #         st.write(f"Sending {name} pages {start_page}-{end_page} to Azure...")
+            #         with st.spinner(f"Processing {name}..."):
+            #             response = requests.post(
+            #                 f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
+            #                 headers=headers,
+            #                 data=split_pdf.getvalue(),
+            #             )
     
-                        if response.status_code == 202:
-                            operation_location = response.headers["Operation-Location"]
-                            st.write("Processing... Please wait.")
+            #             if response.status_code == 202:
+            #                 operation_location = response.headers["Operation-Location"]
+            #                 st.write("Processing... Please wait.")
     
-                            while True:
-                                poll_response = requests.get(
-                                    operation_location,
-                                    headers={"Ocp-Apim-Subscription-Key": DI_API_KEY},
-                                )
-                                result = poll_response.json()
+            #                 while True:
+            #                     poll_response = requests.get(
+            #                         operation_location,
+            #                         headers={"Ocp-Apim-Subscription-Key": DI_API_KEY},
+            #                     )
+            #                     result = poll_response.json()
     
-                                if result.get("status") == "succeeded":
-                                    extracted_data = result["analyzeResult"]
-                                    st.success("Document processed successfully!")
-                                    break
-                                elif result.get("status") == "failed":
-                                    st.error("Failed to process document.")
-                                    st.json(result)
-                                    break
-                        else:
-                            st.error("Error sending document to Azure.")
-                            st.json(response.json())
+            #                     if result.get("status") == "succeeded":
+            #                         extracted_data = result["analyzeResult"]
+            #                         st.success("Document processed successfully!")
+            #                         break
+            #                     elif result.get("status") == "failed":
+            #                         st.error("Failed to process document.")
+            #                         st.json(result)
+            #                         break
+            #             else:
+            #                 st.error("Error sending document to Azure.")
+            #                 st.json(response.json())
     
-                    if extracted_data:
-                        st.subheader("Extracted Data")
-                        fields_to_display = [
-                            "Trademark",
-                            "Owner",
-                            "Class",
-                            "Status",
-                            "Goods/Service",
-                            "Design Phrase",
-                        ]
-                        extracted_fields = {}
+            #         if extracted_data:
+            #             st.subheader("Extracted Data")
+            #             fields_to_display = [
+            #                 "Trademark",
+            #                 "Owner",
+            #                 "Class",
+            #                 "Status",
+            #                 "Goods/Service",
+            #                 "Design Phrase",
+            #             ]
+            #             extracted_fields = {}
     
-                        documents = extracted_data.get("documents", [])
-                        for doc in documents:
-                            fields = doc.get("fields", {})
-                            for field_name, field_value in fields.items():
-                                if field_name in fields_to_display:
-                                    extracted_fields[field_name] = field_value.get(
-                                        "valueString", "N/A"
-                                    )
+            #             documents = extracted_data.get("documents", [])
+            #             for doc in documents:
+            #                 fields = doc.get("fields", {})
+            #                 for field_name, field_value in fields.items():
+            #                     if field_name in fields_to_display:
+            #                         extracted_fields[field_name] = field_value.get(
+            #                             "valueString", "N/A"
+            #                         )
     
-                        st.json(extracted_fields)
-                        redis_client.set(redis_key, json.dumps(extracted_fields))
-                    st.success("Completed assessment!")
+            #             st.json(extracted_fields)
+            #             redis_client.set(redis_key, json.dumps(extracted_fields))
+            #         st.success("Completed assessment!")
