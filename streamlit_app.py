@@ -37,7 +37,8 @@ if "removed_documents" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
-st.title("Trademark Attorney Intelligence", divider = "orange")
+st.title("Trademark Attorney Intelligence")
+st.subheader("", divider = "blue")
 
 uploaded_files = st.file_uploader(
     "Upload files less than 400 pages",
