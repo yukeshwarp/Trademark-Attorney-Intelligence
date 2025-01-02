@@ -215,7 +215,7 @@ if uploaded_files:
             with st.spinner("Extracting trademarks..."):
                 url = f"{azure_llm_endpoint}/openai/deployments/{llm_model}/chat/completions?api-version={llm_api_version}"
                 llm_response = requests.post(
-                    url, headers=llm_headers, json=data, timeout=30
+                    url, headers=llm_headers, json=data, timeout=120
                 )
             st.success("Extraction completed!")
             response = (
