@@ -8,6 +8,7 @@ import re
 import uuid
 import redis
 from celery import Celery
+from celery import group
 
 DI_ENDPOINT = os.getenv("COGNITIVE_SERVICES_DI_ENDPOINT")
 DI_API_KEY = os.getenv("COGNITIVE_SERVICES_DI_API_KEY")
@@ -56,6 +57,34 @@ uploaded_files = st.file_uploader(
     label_visibility="collapsed",
 )
 
+# @celery.task(bind=True)
+# def analyze_document(self, pdf_bytes, name, start_page, end_page):
+#     split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
+#     response = requests.post(
+#         f"{DI_ENDPOINT}/formrecognizer/documentModels/{DI_MODEL_ID}:analyze?api-version=2023-07-31",
+#         headers=headers,
+#         data=split_pdf.getvalue(),
+#     )
+
+#     if response.status_code == 202:
+#         operation_location = response.headers["Operation-Location"]
+#         while True:
+#             poll_response = requests.get(
+#                 operation_location,
+#                 headers={"Ocp-Apim-Subscription-Key": DI_API_KEY},
+#             )
+#             result = poll_response.json()
+
+#             if result.get("status") == "succeeded":
+#                 extracted_data = result["analyzeResult"]
+#                 redis_client.set(f"{redis_key}_{name}", json.dumps(extracted_data))
+#                 return extracted_data
+
+#             elif result.get("status") == "failed":
+#                 self.retry(countdown=10, exc=Exception("Processing failed"))
+#                 return None
+#     return None
+
 @celery.task(bind=True)
 def analyze_document(self, pdf_bytes, name, start_page, end_page):
     split_pdf = split_pdf_by_page_range(pdf_bytes, start_page, end_page)
@@ -83,6 +112,7 @@ def analyze_document(self, pdf_bytes, name, start_page, end_page):
                 self.retry(countdown=10, exc=Exception("Processing failed"))
                 return None
     return None
+
 
 def split_pdf_by_page_range(pdf_bytes, start_page, end_page):
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -205,11 +235,15 @@ if uploaded_files:
     if batch:
         extracted_batches.append(batch)
 
+    # Parallelize processing using Celery group
+    tasks = []
     for batch in extracted_batches:
         for pdf_bytes, name, start_page, end_page in batch:
-            analyze_document.delay(pdf_bytes, name, start_page, end_page)
+            tasks.append(analyze_document.s(pdf_bytes, name, start_page, end_page))
 
-    st.success("Documents are being processed in the background.")
+    group(*tasks).apply_async()
+
+    st.success("Documents are being processed in parallel.")
 
             # with st.spinner('Accessing conflics..'):
             #     for entry in records:
