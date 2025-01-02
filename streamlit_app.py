@@ -139,6 +139,9 @@ if uploaded_files:
             and uploaded_file.name not in st.session_state.removed_documents
         ):
             new_files.append(uploaded_file)
+
+    batch = []
+    extracted_batches = []
     
     for new_file in new_files:
         st.success(f"File Selected: {new_file.name}")
