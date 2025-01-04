@@ -196,7 +196,7 @@ def extract_design_phrase(document: str, start_page: int, pdf_document: fitz.Doc
 
 def parse_trademark_details(document_path: str) -> List[Dict[str, Union[str, List[int]]]]:
     with fitz.open(document_path) as pdf_document:
-        all_extracted_data = []
+        trademark_list = []
         for page_num in range(pdf_document.page_count):
             page = pdf_document.load_page(page_num)
             page_text = page.get_text()
@@ -212,11 +212,11 @@ def parse_trademark_details(document_path: str) -> List[Dict[str, Union[str, Lis
                     extracted_data["page_number"] = page_num + 1
                     extracted_data.update(additional_data)
                     extracted_data["design_phrase"] = design_phrase
-                    all_extracted_data.append(extracted_data)
+                    trademark_list.append(extracted_data)
                     extracted_data["registration_number"] = registration_number
                     
                 trademark_list = []
-                for i, data in enumerate(all_extracted_data, start=1):
+                for i, data in enumerate(trademark_list, start=1):
                     try:
                         trademark_name = data.get("trademark_name", "").split(',')[0].strip()
                         if "Global Filings" in trademark_name:
@@ -277,10 +277,10 @@ def parse_trademark_details(document_path: str) -> List[Dict[str, Union[str, Lis
                 extracted_data = extract_trademark_details_code2(page_text)
                 if extracted_data:
                     extracted_data["page_number"] = page_num + 1
-                    all_extracted_data.append(extracted_data)
+                    trademark_list.append(extracted_data)
 
                 trademark_list = []
-                for i, data in enumerate(all_extracted_data, start=1):
+                for i, data in enumerate(trademark_list, start=1):
                     try:
                         trademark_details = TrademarkDetails(
                             trademark_name=data.get("trademark_name", ""),
@@ -330,11 +330,11 @@ def parse_trademark_details_from_stream(pdf_document) -> List[Dict[str, Union[st
                 extracted_data["page_number"] = page_num + 1
                 extracted_data.update(additional_data)
                 extracted_data["design_phrase"] = design_phrase
-                all_extracted_data.append(extracted_data)
+                trademark_list.append(extracted_data)
                 extracted_data["registration_number"] = registration_number
                 
             trademark_list = []
-            for i, data in enumerate(all_extracted_data, start=1):
+            for i, data in enumerate(trademark_list, start=1):
                 try:
                     trademark_name = data.get("trademark_name", "").split(',')[0].strip()
                     if "Global Filings" in trademark_name:
