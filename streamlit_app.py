@@ -315,80 +315,81 @@ def parse_trademark_details(document_path: str) -> List[Dict[str, Union[str, Lis
 
 def parse_trademark_details_from_stream(pdf_document) -> List[Dict[str, Union[str, List[int]]]]:
     trademark_list = []
-    for page_num in range(pdf_document.page_count):
-        page = pdf_document.load_page(page_num)
-        page_text = page.get_text()
+    return Hello
+    # for page_num in range(pdf_document.page_count):
+    #     page = pdf_document.load_page(page_num)
+    #     page_text = page.get_text()
         
-        if is_correct_format_code1(page_text):
-            preprocessed_chunk = preprocess_text(page_text)
-            extracted_data = extract_trademark_details_code1(preprocessed_chunk)
-            additional_data = extract_international_class_numbers_and_goods_services(page_text, page_num, pdf_document)
-            registration_number = extract_registration_number(page_text)
-            design_phrase = extract_design_phrase(page_text, page_num, pdf_document)
+    #     if is_correct_format_code1(page_text):
+    #         preprocessed_chunk = preprocess_text(page_text)
+    #         extracted_data = extract_trademark_details_code1(preprocessed_chunk)
+    #         additional_data = extract_international_class_numbers_and_goods_services(page_text, page_num, pdf_document)
+    #         registration_number = extract_registration_number(page_text)
+    #         design_phrase = extract_design_phrase(page_text, page_num, pdf_document)
             
-            if extracted_data:
-                extracted_data["page_number"] = page_num + 1
-                extracted_data.update(additional_data)
-                extracted_data["design_phrase"] = design_phrase
-                trademark_list.append(extracted_data)
-                extracted_data["registration_number"] = registration_number
+    #         if extracted_data:
+    #             extracted_data["page_number"] = page_num + 1
+    #             extracted_data.update(additional_data)
+    #             extracted_data["design_phrase"] = design_phrase
+    #             trademark_list.append(extracted_data)
+    #             extracted_data["registration_number"] = registration_number
                 
-            trademark_list = []
-            for i, data in enumerate(trademark_list, start=1):
-                try:
-                    trademark_name = data.get("trademark_name", "").split(',')[0].strip()
-                    if "Global Filings" in trademark_name:
-                        trademark_name = trademark_name.split("Global Filings")[0].strip()
-                    owner = data.get("owner", "").split(',')[0].strip()
-                    status = data.get("status", "").split(',')[0].strip()
-                    serial_number = data.get("serial_number", "")
-                    international_class_number = data.get("international_class_numbers", [])
-                    goods_services = data.get("goods_services", "")
-                    page_number = data.get("page_number", "")
-                    registration_number = data.get("registration_number", "No registration number presented in document")
-                    design_phrase = data.get("design_phrase", "No Design phrase presented in document")
+    #         trademark_list = []
+    #         for i, data in enumerate(trademark_list, start=1):
+    #             try:
+    #                 trademark_name = data.get("trademark_name", "").split(',')[0].strip()
+    #                 if "Global Filings" in trademark_name:
+    #                     trademark_name = trademark_name.split("Global Filings")[0].strip()
+    #                 owner = data.get("owner", "").split(',')[0].strip()
+    #                 status = data.get("status", "").split(',')[0].strip()
+    #                 serial_number = data.get("serial_number", "")
+    #                 international_class_number = data.get("international_class_numbers", [])
+    #                 goods_services = data.get("goods_services", "")
+    #                 page_number = data.get("page_number", "")
+    #                 registration_number = data.get("registration_number", "No registration number presented in document")
+    #                 design_phrase = data.get("design_phrase", "No Design phrase presented in document")
 
-                    # If crucial fields are missing, attempt to re-extract the values
-                    if not trademark_name or not owner or not status or not international_class_number:
-                        preprocessed_chunk = preprocess_text(data.get("raw_text", ""))
-                        extracted_data = extract_trademark_details_code1(preprocessed_chunk)
-                        trademark_name = extracted_data.get("trademark_name", trademark_name).split(',')[0].strip()
-                        if "Global Filings" in trademark_name:
-                            trademark_name = trademark_name.split("Global Filings")[0].strip()
-                        owner = extracted_data.get("owner", owner).split(',')[0].strip()
-                        status = extracted_data.get("status", status).split(',')[0].strip()
-                        international_class_number = parse_international_class_numbers(extracted_data.get("international_class_number", "")) or international_class_number
-                        registration_number = extracted_data.get("registration_number", registration_number).split(',')[0].strip()
+    #                 # If crucial fields are missing, attempt to re-extract the values
+    #                 if not trademark_name or not owner or not status or not international_class_number:
+    #                     preprocessed_chunk = preprocess_text(data.get("raw_text", ""))
+    #                     extracted_data = extract_trademark_details_code1(preprocessed_chunk)
+    #                     trademark_name = extracted_data.get("trademark_name", trademark_name).split(',')[0].strip()
+    #                     if "Global Filings" in trademark_name:
+    #                         trademark_name = trademark_name.split("Global Filings")[0].strip()
+    #                     owner = extracted_data.get("owner", owner).split(',')[0].strip()
+    #                     status = extracted_data.get("status", status).split(',')[0].strip()
+    #                     international_class_number = parse_international_class_numbers(extracted_data.get("international_class_number", "")) or international_class_number
+    #                     registration_number = extracted_data.get("registration_number", registration_number).split(',')[0].strip()
 
-                    trademark_details = TrademarkDetails(
-                        trademark_name=trademark_name,
-                        owner=owner,
-                        status=status,
-                        serial_number=serial_number,
-                        international_class_number=international_class_number,
-                        goods_services=goods_services,
-                        page_number=page_number,
-                        registration_number=registration_number,
-                        design_phrase=design_phrase
-                    )                        
-                    trademark_info = {
-                        "trademark_name": trademark_details.trademark_name,
-                        "owner": trademark_details.owner,
-                        "status": trademark_details.status,
-                        "serial_number": trademark_details.serial_number,
-                        "international_class_number": trademark_details.international_class_number,
-                        "goods_services": trademark_details.goods_services,
-                        "page_number": trademark_details.page_number,
-                        "registration_number":trademark_details.registration_number,
-                        "design_phrase": trademark_details.design_phrase
-                    }
-                    st.write(trademark_info)
-                    st.markdown("---")
-                    trademark_list.append(trademark_info)
-                except ValidationError as e:
-                    print(f"Validation error for trademark {i}: {e}")
+    #                 trademark_details = TrademarkDetails(
+    #                     trademark_name=trademark_name,
+    #                     owner=owner,
+    #                     status=status,
+    #                     serial_number=serial_number,
+    #                     international_class_number=international_class_number,
+    #                     goods_services=goods_services,
+    #                     page_number=page_number,
+    #                     registration_number=registration_number,
+    #                     design_phrase=design_phrase
+    #                 )                        
+    #                 trademark_info = {
+    #                     "trademark_name": trademark_details.trademark_name,
+    #                     "owner": trademark_details.owner,
+    #                     "status": trademark_details.status,
+    #                     "serial_number": trademark_details.serial_number,
+    #                     "international_class_number": trademark_details.international_class_number,
+    #                     "goods_services": trademark_details.goods_services,
+    #                     "page_number": trademark_details.page_number,
+    #                     "registration_number":trademark_details.registration_number,
+    #                     "design_phrase": trademark_details.design_phrase
+    #                 }
+    #                 st.write(trademark_info)
+    #                 st.markdown("---")
+    #                 trademark_list.append(trademark_info)
+    #             except ValidationError as e:
+    #                 print(f"Validation error for trademark {i}: {e}")
         
-    return trademark_list
+    # return trademark_list
 
 # Streamlit app
 st.title("Trademark Details Extractor")
@@ -411,21 +412,21 @@ if st.session_state['document']:
     
     # Process and extract trademark details
     extracted_data = parse_trademark_details_from_stream(pdf_document)
-    
-    # Display extracted data
-    if extracted_data:
-        st.write("## Extracted Trademark Details")
-        for data in extracted_data:
-            st.write("### Trademark Information")
-            st.write(f"**Trademark Name:** {data.get('trademark_name', 'N/A')}")
-            st.write(f"**Owner:** {data.get('owner', 'N/A')}")
-            st.write(f"**Status:** {data.get('status', 'N/A')}")
-            st.write(f"**Serial Number:** {data.get('serial_number', 'N/A')}")
-            st.write(f"**International Class Numbers:** {', '.join(map(str, data.get('international_class_number', [])))}")
-            st.write(f"**Goods & Services:** {data.get('goods_services', 'N/A')}")
-            st.write(f"**Page Number:** {data.get('page_number', 'N/A')}")
-            st.write(f"**Registration Number:** {data.get('registration_number', 'N/A')}")
-            st.write(f"**Design Phrase:** {data.get('design_phrase', 'N/A')}")
-            st.write("---")
-    else:
-        st.error("No trademark details could be extracted from the document.")
+    st.write(extracted_data)
+    # # Display extracted data
+    # if extracted_data:
+    #     st.write("## Extracted Trademark Details")
+    #     for data in extracted_data:
+    #         st.write("### Trademark Information")
+    #         st.write(f"**Trademark Name:** {data.get('trademark_name', 'N/A')}")
+    #         st.write(f"**Owner:** {data.get('owner', 'N/A')}")
+    #         st.write(f"**Status:** {data.get('status', 'N/A')}")
+    #         st.write(f"**Serial Number:** {data.get('serial_number', 'N/A')}")
+    #         st.write(f"**International Class Numbers:** {', '.join(map(str, data.get('international_class_number', [])))}")
+    #         st.write(f"**Goods & Services:** {data.get('goods_services', 'N/A')}")
+    #         st.write(f"**Page Number:** {data.get('page_number', 'N/A')}")
+    #         st.write(f"**Registration Number:** {data.get('registration_number', 'N/A')}")
+    #         st.write(f"**Design Phrase:** {data.get('design_phrase', 'N/A')}")
+    #         st.write("---")
+    # else:
+    #     st.error("No trademark details could be extracted from the document.")
