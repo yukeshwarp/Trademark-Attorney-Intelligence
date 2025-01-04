@@ -408,13 +408,17 @@ if st.session_state['document']:
     # Read PDF directly from stream
     document_bytes = st.session_state['document'].getvalue()
     pdf_document = fitz.open(stream=document_bytes, filetype="pdf")
-    
+    for page_num in range(pdf_document.page_count):
+        st.write("hi")
+        page = pdf_document.load_page(page_num)
+        page_text = page.get_text()
+        st.write(page_text)
     # Extract text from the PDF
-    document_text = "".join([page.get_text() for page in pdf_document])
+    # document_text = "".join([page.get_text() for page in pdf_document])
     
-    # Process and extract trademark details
-    extracted_data = parse_trademark_details_from_stream(pdf_document)
-    st.write(extracted_data)
+    # # Process and extract trademark details
+    # extracted_data = parse_trademark_details_from_stream(pdf_document)
+    # st.write(extracted_data)
     # # Display extracted data
     # if extracted_data:
     #     st.write("## Extracted Trademark Details")
