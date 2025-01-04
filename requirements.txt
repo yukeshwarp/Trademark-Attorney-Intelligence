@@ -6,3 +6,7 @@ PyMuPDF
 requests
 redis
 celery
+streamlit
+openai==0.28
+pandas
+pydantic
