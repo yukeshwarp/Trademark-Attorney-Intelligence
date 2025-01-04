@@ -317,6 +317,7 @@ def parse_trademark_details_from_stream(pdf_document) -> List[Dict[str, Union[st
     trademark_list = []
     return "Hello"
     for page_num in range(pdf_document.page_count):
+        st.write("hi")
         page = pdf_document.load_page(page_num)
         page_text = page.get_text()
         st.write(page_text)
