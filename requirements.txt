@@ -6,7 +6,6 @@ uuid
 redis
 openai
 asyncio
-concurrent.futures
 tiktoken
 pydantic
 sentence-transformers
