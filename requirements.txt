@@ -2,7 +2,6 @@ streamlit
 requests
 pyttsx3
 fitz
-re
 uuid
 redis
 openai
